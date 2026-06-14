@@ -1,10 +1,15 @@
-from fastapi import FastAPI
 from backend.app.main import app as backend_app
 
-# Create a thin wrapper app that mounts the real backend both at root
-# and under /api. Some Vercel routing setups forward the full path
-# (including /api) to the function; mounting at both locations ensures
-# endpoints like /shifts/... work regardless.
-app = FastAPI()
-app.mount("/", backend_app)
-app.mount("/api", backend_app)
+
+# ASGI wrapper: strip leading '/api' prefix if present, then forward to
+# the backend ASGI app. This handles Vercel variants that preserve the
+# '/api' prefix when invoking the serverless function.
+async def app(scope, receive, send):
+	if scope.get("type") == "http":
+		path = scope.get("path", "")
+		if path.startswith("/api/"):
+			# mutate the scope path in-place so the backend matches routes
+			scope["path"] = path[len("/api"):]
+		elif path == "/api":
+			scope["path"] = "/"
+	await backend_app(scope, receive, send)
