@@ -333,6 +333,7 @@ export default function App() {
               <th>Points</th>
               <th>Total Hours</th>
               <th>Total Gross</th>
+              <th>Hourly Rate</th>
               <th>Expected Net</th>
               <th>Actions</th>
             </tr>
