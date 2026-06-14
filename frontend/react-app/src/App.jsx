@@ -218,6 +218,10 @@ export default function App() {
           <div>{rows.reduce((s, r) => s + computeGrossForRow(r), 0).toFixed(2)}</div>
         </div>
           <div className="summary-card">
+            <strong>Expected net</strong>
+            <div>{rows.reduce((s, r) => s + computeGrossForRow(r) * 0.85, 0).toFixed(2)}</div>
+          </div>
+          <div className="summary-card">
             <strong>Dollars per point</strong>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <input className="input" type="number" step="0.0001" value={payPeriodPointValue} onChange={e => setPayPeriodPointValue(Number(e.target.value))} />
@@ -238,6 +242,7 @@ export default function App() {
               <th>Points</th>
               <th>Total Hours</th>
               <th>Total Gross</th>
+              <th>Expected Net</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -276,6 +281,7 @@ export default function App() {
                   )}
                 </td>
                 <td>{computeGrossForRow(r)}</td>
+                <td>{(computeGrossForRow(r) * 0.85).toFixed(2)}</td>
                 <td>
                   {editingId === r.id ? (
                     <>
