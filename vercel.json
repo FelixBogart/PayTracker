@@ -6,7 +6,6 @@
   ],
   "routes": [
     { "src": "/api/_supabase_debug", "dest": "/api/_supabase_debug.py" },
-    { "src": "/api/(.*)", "dest": "/api/index.py" },
     { "src": "/(.*)", "dest": "/frontend/react-app/$1" }
   ]
 }
