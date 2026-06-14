@@ -65,12 +65,74 @@ export default function App() {
     return res.json()
   }
 
-  async function fetchThisMonth() {
+  function lastDayOfMonth(year, monthIndex) {
+    return new Date(year, monthIndex + 1, 0).getDate()
+  }
+
+  function getPayPeriodRangeForDate(d) {
+    const date = new Date(d)
+    const year = date.getFullYear()
+    const month = date.getMonth() // 0-indexed
+    if (date.getDate() <= 15) {
+      const start = `${year}-${String(month + 1).padStart(2, '0')}-01`
+      const end = `${year}-${String(month + 1).padStart(2, '0')}-15`
+      return { start, end, label: `${year}-${String(month + 1).padStart(2, '0')} 1st–15th` }
+    } else {
+      const last = lastDayOfMonth(year, month)
+      const start = `${year}-${String(month + 1).padStart(2, '0')}-16`
+      const end = `${year}-${String(month + 1).padStart(2, '0')}-${String(last).padStart(2, '0')}`
+      return { start, end, label: `${year}-${String(month + 1).padStart(2, '0')} 16th–${last}` }
+    }
+  }
+
+  function buildRecentPayPeriods(count = 6) {
+    const periods = []
+    const now = new Date()
+    // build periods backwards from current paycheck
+    let cursor = getPayPeriodRangeForDate(now)
+    for (let i = 0; i < count; i++) {
+      periods.push(cursor)
+      // move cursor to previous period: if current was first (1-15), previous is second of prior month
+      const [y, m] = cursor.start.split('-')
+      let year = Number(y)
+      let month = Number(m) - 1 // 0-index
+      if (cursor.start.endsWith('-01')) {
+        // previous is prior month's 16th–end
+        month = month - 1
+        if (month < 0) { month = 11; year = year - 1 }
+        const last = lastDayOfMonth(year, month)
+        const start = `${year}-${String(month + 1).padStart(2, '0')}-16`
+        const end = `${year}-${String(month + 1).padStart(2, '0')}-${String(last).padStart(2, '0')}`
+        cursor = { start, end, label: `${year}-${String(month + 1).padStart(2, '0')} 16th–${last}` }
+      } else {
+        // cursor was 16th–end; previous is same month's 1-15
+        const year2 = year
+        const month2 = month
+        const start = `${year2}-${String(month2 + 1).padStart(2, '0')}-01`
+        const end = `${year2}-${String(month2 + 1).padStart(2, '0')}-15`
+        cursor = { start, end, label: `${year2}-${String(month2 + 1).padStart(2, '0')} 1st–15th` }
+      }
+    }
+    return periods
+  }
+
+  const [recentPeriods] = useState(() => buildRecentPayPeriods(12))
+  const [selectedPeriodIndex, setSelectedPeriodIndex] = useState(0)
+
+  async function fetchThisMonth(startArg, endArg) {
     setLoading(true)
     try {
       const now = new Date()
-      const start = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
-      const end = now.toISOString().split('T')[0]
+      let start, end
+      if (startArg && endArg) {
+        start = startArg
+        end = endArg
+      } else {
+        // default to currently selected paycheck
+        const p = recentPeriods[selectedPeriodIndex] || getPayPeriodRangeForDate(now)
+        start = p.start
+        end = p.end
+      }
       const res = await fetch(`${API_BASE}/shifts/${start}/${end}`)
       const j = await res.json()
       setRows(j.rows || [])
@@ -89,7 +151,9 @@ export default function App() {
   function computeGrossForRow(r) {
     // prefer server-calculated when we are not overriding
     const isDriver = (r.role || (Number(r.tipped_hours||0) > 0 ? 'driver' : 'cashier')) === 'driver'
-    const inSelected = getPayPeriodSlotForDate(r.shift_date) === payPeriodSlot
+    const selectedPeriod = recentPeriods[selectedPeriodIndex]
+    const displayedSlot = selectedPeriod ? (selectedPeriod.start && selectedPeriod.start.endsWith('-01') ? 'first' : 'second') : payPeriodSlot
+    const inSelected = getPayPeriodSlotForDate(r.shift_date) === displayedSlot
     if (isDriver && inSelected) {
       const tips = Number(r.tipped_hours || 0)
       const pts = Number(r.points || 0)
@@ -207,7 +271,18 @@ export default function App() {
         </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2>Shifts (this month)</h2>
+        <div>
+          <h2>Shifts</h2>
+          <div style={{ fontSize: 12, color: '#666' }}>{(recentPeriods[selectedPeriodIndex] || {}).label}</div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <label style={{ fontSize: 12 }}>Period</label>
+          <select className="input" value={selectedPeriodIndex} onChange={e => { setSelectedPeriodIndex(Number(e.target.value)); setTimeout(() => fetchThisMonth(), 0) }}>
+            {recentPeriods.map((p, idx) => (
+              <option key={p.start + p.end} value={idx}>{p.label}</option>
+            ))}
+          </select>
+        </div>
       </div>
       <div className="cards-row">
         <div className="summary-card">
