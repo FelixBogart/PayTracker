@@ -24,4 +24,12 @@ async def app(scope, receive, send):
 					scope["raw_path"] = b"/"
 				except Exception:
 					pass
+		# temporary debug endpoint to inspect forwarded scope values
+		if scope.get("path") == "/__scope_debug":
+			body = ("{\"path\": \"%s\", \"raw_path\": %s}" % (
+				scope.get("path"), repr(scope.get("raw_path"))
+			)).encode("utf-8")
+			await send({"type": "http.response.start", "status": 200, "headers": [[b"content-type", b"application/json"]]})
+			await send({"type": "http.response.body", "body": body})
+			return
 	await backend_app(scope, receive, send)
