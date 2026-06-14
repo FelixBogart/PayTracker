@@ -27,6 +27,14 @@ export default function App() {
     points: 0,
     hours: 0,
   })
+  const [netPercent, setNetPercent] = useState(() => {
+    try {
+      const raw = localStorage.getItem('expectedNetPercent')
+      return raw ? Number(raw) : 85
+    } catch (e) {
+      return 85
+    }
+  })
   const [rows, setRows] = useState([])
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({})
@@ -42,6 +50,7 @@ export default function App() {
     try {
       localStorage.setItem('payPeriodPointValue', String(payPeriodPointValue))
       localStorage.setItem('payPeriodSlot', payPeriodSlot)
+      localStorage.setItem('expectedNetPercent', String(netPercent))
     } catch (e) {
       // ignore
     }
@@ -219,7 +228,7 @@ export default function App() {
         </div>
           <div className="summary-card">
             <strong>Expected net</strong>
-            <div>{rows.reduce((s, r) => s + computeGrossForRow(r) * 0.85, 0).toFixed(2)}</div>
+            <div>{rows.reduce((s, r) => s + computeGrossForRow(r) * (netPercent/100), 0).toFixed(2)}</div>
           </div>
           <div className="summary-card">
             <strong>Dollars per point</strong>
@@ -231,6 +240,13 @@ export default function App() {
               </select>
             </div>
           </div>
+            <div className="summary-card">
+              <strong>Expected net %</strong>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input className="input" type="number" step="0.1" value={netPercent} onChange={e => setNetPercent(Number(e.target.value))} />
+                <div style={{ paddingLeft: 4 }}>%</div>
+              </div>
+            </div>
       </div>
 
       {loading ? <div>Loading…</div> : (
@@ -281,7 +297,7 @@ export default function App() {
                   )}
                 </td>
                 <td>{computeGrossForRow(r)}</td>
-                <td>{(computeGrossForRow(r) * 0.85).toFixed(2)}</td>
+                <td>{(computeGrossForRow(r) * (netPercent/100)).toFixed(2)}</td>
                 <td>
                   {editingId === r.id ? (
                     <>
