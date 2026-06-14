@@ -263,70 +263,76 @@ export default function App() {
             </tr>
           </thead>
           <tbody>
-            {rows.map(r => (
-              <tr key={r.id || r.shift_date}>
-                <td>
-                  {editingId === r.id ? (
-                    <input className="input" type="date" value={editForm.shift_date} onChange={e => setEditForm({ ...editForm, shift_date: e.target.value })} />
-                  ) : (
-                    r.shift_date
-                  )}
-                </td>
-                <td>
-                  {editingId === r.id ? (
-                    <select className="input" value={editForm.role} onChange={e => setEditForm({ ...editForm, role: e.target.value })}>
-                      <option value="driver">Driver</option>
-                      <option value="cashier">Cashier</option>
-                    </select>
-                  ) : (
-                    r.role || (Number(r.tipped_hours||0) > 0 ? 'driver' : 'cashier')
-                  )}
-                </td>
-                <td>
-                  {editingId === r.id ? (
-                    <input className="input" type="number" value={editForm.points} onChange={e => setEditForm({ ...editForm, points: Number(e.target.value) })} />
-                  ) : (
-                    r.points || ''
-                  )}
-                </td>
-                <td>
-                  {editingId === r.id ? (
-                    <input className="input" type="number" step="0.25" value={editForm.hours} onChange={e => setEditForm({ ...editForm, hours: Number(e.target.value) })} />
-                  ) : (
-                    `${Number(r.tipped_hours || 0) + Number(r.untipped_hours || 0)}`
-                  )}
-                </td>
-                <td>{computeGrossForRow(r)}</td>
-                <td>{(computeGrossForRow(r) * (netPercent/100)).toFixed(2)}</td>
-                <td>
-                  {editingId === r.id ? (
-                    <>
-                      <button className="btn btn-primary" onClick={async () => {
-                        const hoursVal = Number(editForm.hours || 0)
-                        const payload = {
-                          shift_date: editForm.shift_date,
-                          role: editForm.role,
-                          points: Number(editForm.points || 0),
-                          tipped_hours: editForm.role === 'driver' ? hoursVal : 0,
-                          untipped_hours: editForm.role === 'cashier' ? hoursVal : 0,
-                          point_value: Number(editForm.point_value ?? r.point_value ?? payPeriodPointValue),
-                        }
-                        await updateShift(r.id, payload)
-                        setEditingId(null)
-                        setEditForm({})
-                        fetchThisMonth()
-                      }}>Save</button>
-                      <button className="btn btn-secondary" onClick={() => { setEditingId(null); setEditForm({}) }} style={{ marginLeft: 8 }}>Cancel</button>
-                    </>
-                  ) : (
-                    <>
-                      <button className="btn" onClick={() => { setEditingId(r.id); setEditForm({ shift_date: r.shift_date, role: r.role || (Number(r.tipped_hours||0) > 0 ? 'driver' : 'cashier'), points: r.points || 0, hours: (Number(r.tipped_hours||0) + Number(r.untipped_hours||0)), point_value: r.point_value }) }}>Edit</button>
-                      <button className="btn btn-danger" onClick={() => deleteShift(r.id)} style={{ marginLeft: 8 }}>Delete</button>
-                    </>
-                  )}
-                </td>
-              </tr>
-            ))}
+            {rows.map(r => {
+              const gross = computeGrossForRow(r)
+              const totalHours = Number(r.tipped_hours || 0) + Number(r.untipped_hours || 0)
+              const grossHr = totalHours > 0 ? (gross / totalHours).toFixed(2) : (0).toFixed(2)
+              return (
+                <tr key={r.id || r.shift_date}>
+                  <td>
+                    {editingId === r.id ? (
+                      <input className="input" type="date" value={editForm.shift_date} onChange={e => setEditForm({ ...editForm, shift_date: e.target.value })} />
+                    ) : (
+                      r.shift_date
+                    )}
+                  </td>
+                  <td>
+                    {editingId === r.id ? (
+                      <select className="input" value={editForm.role} onChange={e => setEditForm({ ...editForm, role: e.target.value })}>
+                        <option value="driver">Driver</option>
+                        <option value="cashier">Cashier</option>
+                      </select>
+                    ) : (
+                      r.role || (Number(r.tipped_hours||0) > 0 ? 'driver' : 'cashier')
+                    )}
+                  </td>
+                  <td>
+                    {editingId === r.id ? (
+                      <input className="input" type="number" value={editForm.points} onChange={e => setEditForm({ ...editForm, points: Number(e.target.value) })} />
+                    ) : (
+                      r.points || ''
+                    )}
+                  </td>
+                  <td>
+                    {editingId === r.id ? (
+                      <input className="input" type="number" step="0.25" value={editForm.hours} onChange={e => setEditForm({ ...editForm, hours: Number(e.target.value) })} />
+                    ) : (
+                      `${totalHours}`
+                    )}
+                  </td>
+                  <td>{gross}</td>
+                  <td>{grossHr}</td>
+                  <td>{(gross * (netPercent/100)).toFixed(2)}</td>
+                  <td>
+                    {editingId === r.id ? (
+                      <>
+                        <button className="btn btn-primary" onClick={async () => {
+                          const hoursVal = Number(editForm.hours || 0)
+                          const payload = {
+                            shift_date: editForm.shift_date,
+                            role: editForm.role,
+                            points: Number(editForm.points || 0),
+                            tipped_hours: editForm.role === 'driver' ? hoursVal : 0,
+                            untipped_hours: editForm.role === 'cashier' ? hoursVal : 0,
+                            point_value: Number(editForm.point_value ?? r.point_value ?? payPeriodPointValue),
+                          }
+                          await updateShift(r.id, payload)
+                          setEditingId(null)
+                          setEditForm({})
+                          fetchThisMonth()
+                        }}>Save</button>
+                        <button className="btn btn-secondary" onClick={() => { setEditingId(null); setEditForm({}) }} style={{ marginLeft: 8 }}>Cancel</button>
+                      </>
+                    ) : (
+                      <>
+                        <button className="btn" onClick={() => { setEditingId(r.id); setEditForm({ shift_date: r.shift_date, role: r.role || (Number(r.tipped_hours||0) > 0 ? 'driver' : 'cashier'), points: r.points || 0, hours: (Number(r.tipped_hours||0) + Number(r.untipped_hours||0)), point_value: r.point_value }) }}>Edit</button>
+                        <button className="btn btn-danger" onClick={() => deleteShift(r.id)} style={{ marginLeft: 8 }}>Delete</button>
+                      </>
+                    )}
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       )}
