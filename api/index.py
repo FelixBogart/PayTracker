@@ -9,7 +9,19 @@ async def app(scope, receive, send):
 		path = scope.get("path", "")
 		if path.startswith("/api/"):
 			# mutate the scope path in-place so the backend matches routes
-			scope["path"] = path[len("/api"):]
+			new_path = path[len("/api"):]
+			scope["path"] = new_path
+			# also update raw_path (bytes) if present
+			if scope.get("raw_path") is not None:
+				try:
+					scope["raw_path"] = new_path.encode("utf-8")
+				except Exception:
+					pass
 		elif path == "/api":
 			scope["path"] = "/"
+			if scope.get("raw_path") is not None:
+				try:
+					scope["raw_path"] = b"/"
+				except Exception:
+					pass
 	await backend_app(scope, receive, send)
